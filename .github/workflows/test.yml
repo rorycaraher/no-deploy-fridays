@@ -1,0 +1,102 @@
+name: Integration Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      # Real "today" varies with when CI happens to run, so these scenarios are
+      # built dynamically from today's actual date/weekday rather than hardcoded,
+      # keeping the assertions deterministic regardless of what day this runs on.
+      - name: Compute today's date facts
+        id: today
+        run: |
+          iso="$(TZ=America/New_York date +%Y-%m-%d)"
+          weekday="$(TZ=America/New_York date +%a | tr '[:upper:]' '[:lower:]')"
+          echo "iso=$iso" >> "$GITHUB_OUTPUT"
+          echo "weekday=$weekday" >> "$GITHUB_OUTPUT"
+
+          # All work-day names except today's, so this scenario can never collide
+          # with the "last working day" rule regardless of which day CI runs on.
+          other_days="$(echo "mon,tue,wed,thu,fri,sat,sun" | tr ',' '\n' | grep -v "^${weekday}$" | paste -sd, -)"
+          echo "other_days=$other_days" >> "$GITHUB_OUTPUT"
+
+      - name: Blocked via explicit holiday
+        id: holiday_case
+        uses: ./
+        with:
+          timezone: 'America/New_York'
+          holidays: ${{ steps.today.outputs.iso }}
+          fail-on-block: 'false'
+
+      - name: Assert holiday case blocked
+        run: |
+          if [ "${{ steps.holiday_case.outputs.is-blocked }}" != "true" ] || [ "${{ steps.holiday_case.outputs.reason }}" != "holiday" ]; then
+            echo "::error::expected is-blocked=true reason=holiday, got is-blocked=${{ steps.holiday_case.outputs.is-blocked }} reason=${{ steps.holiday_case.outputs.reason }}"
+            exit 1
+          fi
+
+      - name: Not blocked when today is excluded from work-days
+        id: not_a_work_day
+        uses: ./
+        with:
+          timezone: 'America/New_York'
+          work-days: ${{ steps.today.outputs.other_days }}
+          holidays: ''
+
+      - name: Assert not-a-work-day case was not blocked
+        run: |
+          if [ "${{ steps.not_a_work_day.outputs.is-blocked }}" != "false" ]; then
+            echo "::error::expected is-blocked=false, got is-blocked=${{ steps.not_a_work_day.outputs.is-blocked }} reason=${{ steps.not_a_work_day.outputs.reason }}"
+            exit 1
+          fi
+
+      - name: Force override bypasses a blocked day without failing
+        id: force_case
+        uses: ./
+        with:
+          timezone: 'America/New_York'
+          holidays: ${{ steps.today.outputs.iso }}
+          force: 'true'
+
+      - name: Assert force case did not fail and reported the original block
+        run: |
+          if [ "${{ steps.force_case.outputs.is-blocked }}" != "true" ] || [ "${{ steps.force_case.outputs.reason }}" != "holiday" ]; then
+            echo "::error::expected force case to report the underlying is-blocked=true reason=holiday, got is-blocked=${{ steps.force_case.outputs.is-blocked }} reason=${{ steps.force_case.outputs.reason }}"
+            exit 1
+          fi
+
+      - name: Fails closed when the holidays calendar can't be fetched
+        id: calendar_error_case
+        continue-on-error: true
+        uses: ./
+        with:
+          timezone: 'America/New_York'
+          holidays-calendar-url: 'https://example.invalid/holidays.ics'
+          on-calendar-error: 'block'
+
+      - name: Assert calendar error case failed closed
+        run: |
+          if [ "${{ steps.calendar_error_case.outcome }}" != "failure" ]; then
+            echo "::error::expected the calendar-fetch-error case to fail the step (fail-on-block defaults to true)"
+            exit 1
+          fi
+          if [ "${{ steps.calendar_error_case.outputs.is-blocked }}" != "true" ] || [ "${{ steps.calendar_error_case.outputs.reason }}" != "calendar-fetch-error" ]; then
+            echo "::error::expected is-blocked=true reason=calendar-fetch-error, got is-blocked=${{ steps.calendar_error_case.outputs.is-blocked }} reason=${{ steps.calendar_error_case.outputs.reason }}"
+            exit 1
+          fi

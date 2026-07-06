@@ -1,0 +1,127 @@
+# No Deploy Fridays
+
+A GitHub Action that blocks deployments on Fridays, on holidays you configure, and — the part people usually forget — on whichever day becomes the *actual* last working day of the week once holidays are taken into account (e.g. Thursday, when Friday is a holiday).
+
+## Why
+
+"Don't deploy on Friday" is easy to say and easy to forget to actually enforce. It also breaks down the moment a holiday shifts the risky day earlier in the week — nobody wants to ship right before a long weekend either, holiday or not. This action makes both rules explicit and automatic.
+
+## What it checks, in order
+
+1. **Is today a configured holiday?** If so, blocked (reason: `holiday`), regardless of weekday.
+2. **Is today the last working day of the week?** Computed from your `work-days` list, walking backwards from the normal end of the week and skipping any day that's a holiday. So if Friday is a holiday, Thursday becomes the blocked day instead (reason: `last-working-day`).
+
+This does **not** look ahead into next week — a holiday on the following Monday does not push the block back to Thursday. Only holidays within the current work week shift the last-working-day calculation.
+
+## Usage
+
+```yaml
+- name: Block risky deploy days
+  uses: your-org/no-deploy-fridays@v1
+  with:
+    timezone: 'America/New_York'
+    holidays: '2026-12-25,2026-01-01'
+```
+
+By default this **fails the step** on a blocked day, which stops the job. To gate a later step instead of failing this one:
+
+```yaml
+- name: Check deploy day
+  id: gate
+  uses: your-org/no-deploy-fridays@v1
+  with:
+    timezone: 'America/New_York'
+    fail-on-block: 'false'
+
+- name: Deploy
+  if: steps.gate.outputs.is-blocked == 'false'
+  run: ./deploy.sh
+```
+
+### Sourcing holidays from a file
+
+```yaml
+- uses: your-org/no-deploy-fridays@v1
+  with:
+    timezone: 'America/New_York'
+    holidays-file: '.github/holidays.yaml'
+```
+
+```yaml
+# .github/holidays.yaml
+- '2026-12-25'
+- '2026-01-01'
+```
+
+(JSON works too — a JSON array of `"YYYY-MM-DD"` strings is valid YAML.)
+
+### Sourcing holidays from a Google Calendar
+
+Use the public ICS URL from a calendar's "Public URL" sharing setting (not the Google Calendar API):
+
+```yaml
+- uses: your-org/no-deploy-fridays@v1
+  with:
+    timezone: 'America/New_York'
+    holidays-calendar-url: 'https://calendar.google.com/calendar/ical/.../public/basic.ics'
+```
+
+All-day events in the feed (including recurring ones) are treated as holidays. `holidays`, `holidays-file`, and `holidays-calendar-url` can all be set together — their dates are merged.
+
+If the calendar can't be fetched, the action **fails closed by default** (treats it as a blocked day) rather than silently allowing a deploy on an unrecognized holiday. Set `on-calendar-error: allow` to instead drop the calendar source and continue with whatever other holidays are configured.
+
+### A 4-day or shifted work week
+
+```yaml
+- uses: your-org/no-deploy-fridays@v1
+  with:
+    timezone: 'Asia/Dubai'
+    work-days: 'sun,mon,tue,wed,thu'
+```
+
+The last entry in `work-days` is treated as the normal end of the week (here, Thursday).
+
+### Emergency override
+
+```yaml
+- uses: your-org/no-deploy-fridays@v1
+  with:
+    timezone: 'America/New_York'
+    force: ${{ contains(github.event.head_commit.message, '[force-deploy]') }}
+```
+
+`force: true` bypasses the block entirely for that run. The bypass is always logged as a warning — never silent — and the action's outputs still report what *would* have happened.
+
+## Inputs
+
+| Name | Required | Default | Description |
+|---|---|---|---|
+| `timezone` | yes | — | IANA timezone name (e.g. `America/New_York`) used to determine the current date and weekday. No UTC default — you must pick your team's timezone explicitly. |
+| `work-days` | no | `mon,tue,wed,thu,fri` | Comma-separated working weekdays, in chronological order. The last entry is the normal end of the week. |
+| `holidays` | no | `''` | Comma or newline separated `YYYY-MM-DD` dates. Merged with the other holiday inputs. |
+| `holidays-file` | no | `''` | Path to a JSON or YAML file (relative to the workspace) containing an array of `YYYY-MM-DD` dates. Merged with the other holiday inputs. |
+| `holidays-calendar-url` | no | `''` | Public ICS feed URL (e.g. a Google Calendar "Public URL"). All-day events are treated as holidays. Merged with the other holiday inputs. |
+| `on-calendar-error` | no | `block` | `block` (fail closed) or `allow` (drop the calendar source) when `holidays-calendar-url` can't be fetched or parsed. |
+| `fail-on-block` | no | `true` | Whether to fail the step on a blocked day, versus only emitting outputs. |
+| `force` | no | `false` | Bypass the block entirely for this run. Always logged, never silent. |
+
+## Outputs
+
+| Name | Description |
+|---|---|
+| `is-blocked` | `"true"` or `"false"` — whether today is blocked, before any `force` override. |
+| `reason` | `holiday`, `last-working-day`, `calendar-fetch-error`, or `""` when not blocked. |
+
+## Development
+
+```bash
+npm ci
+npm test          # unit tests
+npm run build     # bundles src/ into dist/index.js via @vercel/ncc
+```
+
+`dist/index.js` is committed and is what actually runs — GitHub Actions doesn't run `npm install` for JS actions. CI fails if `dist/` is out of sync with `src/`, so always run `npm run build` after changing source and commit the result.
+
+## License
+
+MIT
