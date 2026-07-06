@@ -71,6 +71,13 @@ If the calendar can't be fetched, the action **fails closed by default** (treats
 ### A 4-day or shifted work week
 
 ```yaml
+# 4-day week
+- uses: your-org/no-deploy-fridays@v1
+  with:
+    timezone: 'Asia/Dubai'
+    work-days: 'mon,tue,wed,thu'
+
+    # shifted: Sunday - Thursday
 - uses: your-org/no-deploy-fridays@v1
   with:
     timezone: 'Asia/Dubai'
@@ -89,6 +96,32 @@ The last entry in `work-days` is treated as the normal end of the week (here, Th
 ```
 
 `force: true` bypasses the block entirely for that run. The bypass is always logged as a warning — never silent — and the action's outputs still report what *would* have happened.
+
+### Blocking an entire workflow
+
+GitHub Actions doesn't support running a `uses:` action outside of `jobs:`, so there's no literal "top of the workflow" placement. Instead, use a single dedicated gate job that every deploy job depends on via `needs:`. If the gate job fails (the default `fail-on-block: true` behavior), every job that lists it in `needs` is skipped automatically:
+
+```yaml
+jobs:
+  deploy-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: your-org/no-deploy-fridays@v1
+        with:
+          timezone: 'America/New_York'
+
+  deploy:
+    needs: deploy-gate
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+
+  deploy-staging:
+    needs: deploy-gate
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy-staging.sh
+```
 
 ## Inputs
 
