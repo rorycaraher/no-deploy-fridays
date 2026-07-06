@@ -17,7 +17,7 @@ This does **not** look ahead into next week — a holiday on the following Monda
 
 ```yaml
 - name: Block risky deploy days
-  uses: your-org/no-deploy-fridays@v1
+  uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'America/New_York'
     holidays: '2026-12-25,2026-01-01'
@@ -28,7 +28,7 @@ By default this **fails the step** on a blocked day, which stops the job. To gat
 ```yaml
 - name: Check deploy day
   id: gate
-  uses: your-org/no-deploy-fridays@v1
+  uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'America/New_York'
     fail-on-block: 'false'
@@ -43,7 +43,7 @@ By default this **fails the step** on a blocked day, which stops the job. To gat
 Use the public ICS URL from a calendar's "Public URL" sharing setting (not the Google Calendar API):
 
 ```yaml
-- uses: your-org/no-deploy-fridays@v1
+- uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'America/New_York'
     holidays-calendar-url: 'https://calendar.google.com/calendar/ical/.../public/basic.ics'
@@ -56,7 +56,7 @@ If the calendar can't be fetched, the action **fails closed by default** (treats
 ### Sourcing holidays from a file
 
 ```yaml
-- uses: your-org/no-deploy-fridays@v1
+- uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'America/New_York'
     holidays-file: '.github/holidays.yaml'
@@ -72,13 +72,13 @@ If the calendar can't be fetched, the action **fails closed by default** (treats
 
 ```yaml
 # 4-day week
-- uses: your-org/no-deploy-fridays@v1
+- uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'Asia/Dubai'
     work-days: 'mon,tue,wed,thu'
 
     # shifted: Sunday - Thursday
-- uses: your-org/no-deploy-fridays@v1
+- uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'Asia/Dubai'
     work-days: 'sun,mon,tue,wed,thu'
@@ -89,7 +89,7 @@ The last entry in `work-days` is treated as the normal end of the week (here, Th
 ### Emergency override
 
 ```yaml
-- uses: your-org/no-deploy-fridays@v1
+- uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'America/New_York'
     force: ${{ contains(github.event.head_commit.message, '[force-deploy]') }}
@@ -106,7 +106,7 @@ jobs:
   deploy-gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: your-org/no-deploy-fridays@v1
+      - uses: rorycaraher/no-deploy-fridays@v0.1.3
         with:
           timezone: 'America/New_York'
 
