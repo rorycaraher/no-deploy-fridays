@@ -6,7 +6,8 @@
   "scripts": {
     "build": "ncc build src/index.js -o dist",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "license": "MIT",
   "author": "rorycaraher",

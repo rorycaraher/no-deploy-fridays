@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Rebuilds dist/ into a scratch dir and diffs it against the committed dist/,
+# mirroring the check CI runs, so a stale bundle never leaves this machine.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+if [ ! -d node_modules ]; then
+  echo "no-deploy-fridays: node_modules missing, run 'npm ci' before pushing." >&2
+  exit 1
+fi
+
+tmp_dist="$(mktemp -d)"
+trap 'rm -rf "$tmp_dist"' EXIT
+
+npx ncc build src/index.js -o "$tmp_dist" >/dev/null
+
+if ! diff -rq "$tmp_dist" dist >/dev/null 2>&1; then
+  echo "" >&2
+  echo "no-deploy-fridays: dist/ is out of sync with src/." >&2
+  echo "Run 'npm run build' and commit the result before pushing." >&2
+  exit 1
+fi

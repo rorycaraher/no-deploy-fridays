@@ -122,6 +122,8 @@ npm run build     # bundles src/ into dist/index.js via @vercel/ncc
 
 `dist/index.js` is committed and is what actually runs — GitHub Actions doesn't run `npm install` for JS actions. CI fails if `dist/` is out of sync with `src/`, so always run `npm run build` after changing source and commit the result.
 
+`npm ci`/`npm install` also configures a `pre-push` git hook (via `.githooks/`, wired up through `core.hooksPath`) that rebuilds `dist/` and blocks the push if it doesn't match what's committed — the same check CI runs, just caught before you push instead of after.
+
 ## License
 
 MIT
