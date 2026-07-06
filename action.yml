@@ -1,42 +1,42 @@
-name: 'No Deploy Fridays'
-description: 'Blocks deployments on Fridays, configured holidays, and any day that becomes the last working day of the week once holidays are accounted for.'
-author: 'rorycaraher'
+name: "No Deploy Fridays"
+description: "Block deployments on the actual last day of the week."
+author: "rorycaraher"
 branding:
-  icon: 'calendar'
-  color: 'red'
+  icon: "calendar"
+  color: "red"
 
 inputs:
   timezone:
     description: 'IANA timezone name (e.g. "America/New_York") used to determine the current date and weekday. Required — there is no UTC default, since silently assuming UTC would block/allow on the wrong day for teams outside it.'
     required: true
   work-days:
-    description: 'Comma-separated list of working weekdays in chronological order for your team, using lowercase three-letter abbreviations (mon, tue, wed, thu, fri, sat, sun). The last entry is treated as the normal end of the work week.'
+    description: "Comma-separated list of working weekdays in chronological order for your team, using lowercase three-letter abbreviations (mon, tue, wed, thu, fri, sat, sun). The last entry is treated as the normal end of the work week."
     required: false
-    default: 'mon,tue,wed,thu,fri'
+    default: "mon,tue,wed,thu,fri"
   holidays:
-    description: 'Comma or newline separated list of holiday dates in YYYY-MM-DD format. Merged with holidays-file and holidays-calendar-url if also set.'
+    description: "Comma or newline separated list of holiday dates in YYYY-MM-DD format. Merged with holidays-file and holidays-calendar-url if also set."
     required: false
-    default: ''
+    default: ""
   holidays-file:
-    description: 'Path (relative to the workspace) to a JSON or YAML file containing an array of YYYY-MM-DD holiday dates. Merged with the other holiday inputs.'
+    description: "Path (relative to the workspace) to a JSON or YAML file containing an array of YYYY-MM-DD holiday dates. Merged with the other holiday inputs."
     required: false
-    default: ''
+    default: ""
   holidays-calendar-url:
     description: 'Public ICS feed URL (e.g. a Google Calendar "Public URL" .ics link) to source holiday dates from. All-day events in the feed are treated as holidays. Merged with the other holiday inputs.'
     required: false
-    default: ''
+    default: ""
   on-calendar-error:
     description: 'Behavior when holidays-calendar-url cannot be fetched or parsed: "block" (fail closed, treat as a blocked day) or "allow" (ignore the calendar source and continue with any other configured holidays).'
     required: false
-    default: 'block'
+    default: "block"
   fail-on-block:
     description: 'Whether the action should fail the step (non-zero exit) when a blocked day is detected. Set to "false" to only emit outputs and let the calling workflow decide via a conditional.'
     required: false
-    default: 'true'
+    default: "true"
   force:
     description: 'Set to "true" to bypass the block entirely for this run. The bypass is always logged clearly, it is never silent.'
     required: false
-    default: 'false'
+    default: "false"
 
 outputs:
   is-blocked:
@@ -45,5 +45,5 @@ outputs:
     description: 'Why the day was blocked: "holiday", "last-working-day", "calendar-fetch-error", or "" when not blocked.'
 
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: "node20"
+  main: "dist/index.js"
