@@ -37,6 +37,14 @@ inputs:
     description: 'Set to "true" to bypass the block entirely for this run. The bypass is always logged clearly, it is never silent.'
     required: false
     default: "false"
+  github-token:
+    description: 'Token used to look up the pull request associated with the current commit, to check it for force-label. Required only if you want label-based force-deploy (e.g. `${{ secrets.GITHUB_TOKEN }}`); leave unset to disable that lookup entirely.'
+    required: false
+    default: ""
+  force-label:
+    description: 'PR label name that bypasses the block, same as force: true, when github-token is set and the label is found on a pull request associated with the current commit.'
+    required: false
+    default: "force-deploy"
 
 outputs:
   is-blocked:

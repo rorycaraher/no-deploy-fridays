@@ -58,6 +58,8 @@ function getConfig() {
     onCalendarError: parseOnCalendarError(core.getInput('on-calendar-error') || 'block'),
     failOnBlock: parseBoolean(core.getInput('fail-on-block') || 'true', 'fail-on-block'),
     force: parseBoolean(core.getInput('force') || 'false', 'force'),
+    githubToken: core.getInput('github-token') || '',
+    forceLabel: core.getInput('force-label') || 'force-deploy',
   };
 }
 

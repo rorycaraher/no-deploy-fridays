@@ -92,10 +92,19 @@ The last entry in `work-days` is treated as the normal end of the week (here, Th
 - uses: rorycaraher/no-deploy-fridays@v0.1.3
   with:
     timezone: 'America/New_York'
-    force: ${{ contains(github.event.head_commit.message, '[force-deploy]') }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    force-label: 'force-deploy'
 ```
 
-`force: true` bypasses the block entirely for that run. The bypass is always logged as a warning — never silent — and the action's outputs still report what *would* have happened.
+When `github-token` is set, the action looks up the pull request(s) associated with the current commit (works even on a `push`-to-main deploy triggered after a PR merge, where the event itself carries no PR data) and bypasses the block if any of them carry the `force-label` label. This requires `pull-requests: read` permission for the token:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: read
+```
+
+`force: true` still works as a direct, explicit override (e.g. from a `workflow_dispatch` input) and doesn't require a token. The two are independent — either one bypasses the block. Any bypass is always logged as a warning, naming which mechanism triggered it — never silent — and the action's outputs still report what *would* have happened.
 
 ### Blocking an entire workflow
 
@@ -135,6 +144,8 @@ jobs:
 | `on-calendar-error` | no | `block` | `block` (fail closed) or `allow` (drop the calendar source) when `holidays-calendar-url` can't be fetched or parsed. |
 | `fail-on-block` | no | `true` | Whether to fail the step on a blocked day, versus only emitting outputs. |
 | `force` | no | `false` | Bypass the block entirely for this run. Always logged, never silent. |
+| `github-token` | no | `''` | Token used to look up the pull request(s) associated with the current commit, to check for `force-label`. Leave unset to disable label-based force-deploy entirely. |
+| `force-label` | no | `force-deploy` | PR label that bypasses the block, same as `force: true`, when `github-token` is set and the label is found on a pull request associated with the current commit. |
 
 ## Outputs
 
